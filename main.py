@@ -1,6 +1,16 @@
 from fastapi import FastAPI
+from models.chat_ai import AskQuery
+from services.chat_ai import ask_query
+from dotenv import load_dotenv
 
 app = FastAPI()
+
+
+# This function will run when the server starts
+@app.on_event("startup")
+def startup_event():
+    print("====== Performing startup tasks...=======")
+    load_dotenv()
 
 
 @app.get("/")
@@ -23,10 +33,11 @@ async def read_root():
 
 
 @app.get("/ping")
-async def ping():
+def ping():
     return {"message": "pong", "status": "success"}
 
 
-@app.get("/ask")
-async def ask_question(question: str):
-    return {"question": question, "answer": "This is a placeholder answer from the AI."}
+@app.post("/ask")
+def ask_question(payload: AskQuery):
+    response = ask_query(payload.query)
+    return {"query": payload.query, "response": response}
