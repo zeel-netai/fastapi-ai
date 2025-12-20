@@ -9,3 +9,8 @@ wheels/
 # Virtual environments
 .venv
 .env
+
+# Data files
+all_routes_data.py
+faiss_routes_index
+faiss_routes_metadata.pkl
