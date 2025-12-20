@@ -41,7 +41,7 @@ def make_text_for_embedding(route_item: dict) -> str:
 
 # Check if FAISS index and metadata exist in memory/disk if exists load them
 def is_faiss_index_present() -> dict:
-    result = {"is_existing": False, "vector_store": None, "metadata": None}
+    result = {"is_existing": False, "vectors": None, "metadata": None}
 
     # FAISS stores index in one file and metadata separately
     if os.path.isfile(FAISS_INDEX_DIR) and os.path.isfile(METADATA_PATH):
@@ -52,10 +52,10 @@ def is_faiss_index_present() -> dict:
                 stored_metadata = pickle.load(mfile)
 
             # Load FAISS index
-            vector_store = faiss.read_index(FAISS_INDEX_DIR)
+            vectors = faiss.read_index(FAISS_INDEX_DIR)
 
             result["is_existing"] = True
-            result["vector_store"] = vector_store
+            result["vector_store"] = vectors
             result["metadata"] = stored_metadata
 
             print("FAISS index and metadata loaded successfully.")
@@ -72,7 +72,7 @@ def create_embeddings_model() -> dict:
         result = is_faiss_index_present()
         if result.get("is_existing"):
             return {
-                "vector_store": result.get("vector_store"),
+                "vectors": result.get("vector_store"),
                 "metadata": result.get("metadata"),
             }
 
@@ -118,7 +118,7 @@ def create_embeddings_model() -> dict:
 
 
 # Perform semantic search and return top K results
-def semantic_search(query_text, index, metadata, top_k=5):
+def semantic_search(query_text, vectors, metadata, top_k=5):
     # Create query embedding
     model = GoogleGenerativeAIEmbeddings(model=EMBEDDINGS_MODEL_NAME)
     q_vec = model.embed_query(query_text)
@@ -127,7 +127,7 @@ def semantic_search(query_text, index, metadata, top_k=5):
     q_np = np.array([q_vec], dtype="float32")
 
     # Search top K
-    distances, indices = index.search(q_np, top_k)
+    distances, indices = vectors.search(q_np, top_k)
 
     results = []
     for dist, idx in zip(distances[0], indices[0]):
