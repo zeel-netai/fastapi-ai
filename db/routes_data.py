@@ -1,61 +1,19 @@
 routes_data = [
     {
         "routePath": "/msp-site-wise-alerts",
-        "pagePurpose": "MSP Site Wise Alerts page",
+        "pagePurpose": "Renders the msp site wise alerts view for this application. Users can interact with visualizations and drill into related details.",
         "routeParameters": {
             "key": {
-                "purpose": "Query parameter for key",
-                "type": "string",
-                "required": "false",
+                "purpose": "Optional search/filter key used to narrow down results in list/table views.",
+                "type": "uuid",
+                "required": "False",
                 "source": "queryParam",
             }
         },
-        "isDynamicRoute": "false",
-        "layouts": [],
+        "isDynamicRoute": "False",
+        "layouts": ["layout.jsx", "(dashboard)/layout.jsx"],
+        "routeGroups": ["dashboard"],
         "accessLevel": "public",
         "id": 1,
-    },
-    {
-        "routePath": "/fault-management/alarms",
-        "pagePurpose": "Fault Management Alarms page",
-        "routeParameters": {
-            "key": {
-                "purpose": "Query parameter for key",
-                "type": "string",
-                "required": "false",
-                "source": "queryParam",
-            }
-        },
-        "isDynamicRoute": "false",
-        "layouts": [],
-        "accessLevel": "public",
-        "id": 2,
-    },
-    {
-        "routePath": "/device-map",
-        "pagePurpose": "Device Map page",
-        "routeParameters": {},
-        "isDynamicRoute": "false",
-        "layouts": [],
-        "accessLevel": "public",
-        "id": 3,
-    },
-    {
-        "routePath": "/capture-network",
-        "pagePurpose": "Monitor Network page",
-        "routeParameters": {},
-        "isDynamicRoute": "false",
-        "layouts": [],
-        "accessLevel": "public",
-        "id": 4,
-    },
-    {
-        "routePath": "/group-management",
-        "pagePurpose": "Group Management page",
-        "routeParameters": {},
-        "isDynamicRoute": "false",
-        "layouts": [],
-        "accessLevel": "public",
-        "id": 27,
-    },
+    }
 ]

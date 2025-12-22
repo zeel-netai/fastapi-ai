@@ -16,4 +16,4 @@ DB_CONFIG = {
 
 EMBEDDING_DIMENSION = 384
 
-IS_DEV_MODE = False
+IS_DEV_MODE = os.getenv("ENVIRONMENT") == "development"

@@ -1,7 +1,8 @@
 import uuid
 from db.clickhouse import get_db_client
+
 # from db.devices_list import devices_list
-from services.db_vectorizer import get_device_embedding
+from services.db_vectorizer import get_device_embedding, get_navigation_routes_embedding
 from config import EMBEDDING_DIMENSION, IS_DEV_MODE
 
 
@@ -10,37 +11,50 @@ devices_list = __import__(
     fromlist=["devices_list"],
 ).devices_list
 
+routes_data = __import__(
+    "db.all_routes_data" if IS_DEV_MODE else "db.routes_data",
+    fromlist=["routes_data"],
+).routes_data
 
-def seed_devices_table():
-    # Create a ClickHouse client (HTTP connection)
+
+DATABASE_NAME = "temp"
+VECTOR_INDEX_NAME = "embedding_idx"
+
+
+def ensure_database(client, db_name: str):
+    """
+    Ensures the database exists and sets it as active.
+    """
+    client.command(f"CREATE DATABASE IF NOT EXISTS {db_name}")
+    client.command(f"USE {db_name}")
+
+
+def create_vector_index(client, table_name: str, column_name: str = "embedding"):
+    """
+    Creates a vector similarity index using HNSW + cosine distance.
+    Index is idempotent.
+    """
+    client.command(f"""
+        ALTER TABLE {table_name}
+        ADD INDEX IF NOT EXISTS {VECTOR_INDEX_NAME}
+        {column_name}
+        TYPE vector_similarity(
+            'hnsw',
+            'cosineDistance',
+            {EMBEDDING_DIMENSION}
+        )
+        GRANULARITY 1
+    """)
+
+
+def create_devices_table():
+    """
+    Creates and initializes the `devices` table with a vector similarity index.
+    """
     client = get_db_client()
 
-    # --------------------------------------------------
-    # 1) CREATE DATABASE IF NOT EXISTS
-    # This ensures the 'temp' database exists before we use it.
-    # Running this multiple times is safe (idempotent).
-    # --------------------------------------------------
-    client.command(""" CREATE DATABASE IF NOT EXISTS temp """)
+    ensure_database(client, DATABASE_NAME)
 
-    # --------------------------------------------------
-    # 2) USE `temp` DATABASE
-    # All subsequent SQL will run inside this database.
-    # --------------------------------------------------
-    client.command(""" USE temp """)
-
-    # --------------------------------------------------
-    # 3) CREATE `devices` TABLE
-    #
-    # The table schema includes:
-    # - id: Unique UUID for device row
-    # - device_id/hostname/type: Info about the device
-    # - scanned_ip, port_ip: IP addresses
-    # - alerts_count: Count of alerts seen
-    # - embedding: Array(Float32) storing vector embeddings
-    #
-    # NOTE: The embedding column must match the vector index
-    #       dimension specified below (384 in this example).
-    # --------------------------------------------------
     client.command("""
         CREATE TABLE IF NOT EXISTS devices (
             id UUID,
@@ -48,57 +62,20 @@ def seed_devices_table():
             device_hostname String,
             device_type String,
             scanned_ip String,
-            port_ip Array(String),          -- List of related IPs
+            port_ip Array(String),
             alerts_count UInt32,
-            embedding Array(Float32)        -- Vector used for similarity search
+            embedding Array(Float32)
         )
         ENGINE = MergeTree
         ORDER BY id
     """)
 
-    # --------------------------------------------------
-    # 4) CREATE VECTOR SIMILARITY INDEX
-    #
-    # Vector similarity indexes allow approximate nearest neighbor (ANN)
-    # search for high-dimensional vectors stored in an Array column.
-    #
-    # How it works:
-    #   • ClickHouse supports vector similarity indexes on MergeTree tables.
-    #   • These indexes help prune data and reduce search cost for
-    #     ORDER BY <distanceFunction(...)> queries (cosineDistance, L2Distance).
-    #   • The index is a *skipping index* built over vector blocks.
-    #
-    # Syntax Breakdown (ClickHouse 25.x+):
-    #
-    #   vector_similarity(
-    #     'hnsw',            → method name (HNSW graph for ANN search)
-    #     'cosineDistance',  → distance function for similarity ranking
-    #     384               → dimension of the embedding vector
-    #   )
-    #
-    #   • 'hnsw'    → algorithm type (supports approximate search via graph)
-    #   • 'cosineDistance' → distance metric (for cosine similarity search)
-    #   • 384      → expected number of floats in each embedding array
-    #
-    # NOTE:
-    #  • All arrays in the column must have exactly this many elements.
-    #  • Index creation happens on future inserts; to build it for
-    #    existing rows you may need to MATERIALIZE it later.
-    #  • The `IF NOT EXISTS` clause avoids errors if the index already exists.
-    # --------------------------------------------------
-    client.command(f"""
-        ALTER TABLE devices
-        ADD INDEX IF NOT EXISTS embedding_idx
-        embedding
-        TYPE vector_similarity('hnsw', 'cosineDistance', {EMBEDDING_DIMENSION})
-        GRANULARITY 1
-    """)
+    create_vector_index(client, table_name="devices")
 
     print("✅ 'devices' table and vector similarity index are ready!")
 
 
-def insert_devices(all_devices: list[dict]):
-    devices = all_devices[0:10]
+def insert_devices(devices: list[dict]):
     print(f"Inserting {len(devices)} device records into ClickHouse...")
     """
     Insert multiple device records into the `devices` table.
@@ -167,6 +144,141 @@ def insert_devices(all_devices: list[dict]):
     print(f"✅ Inserted {len(rows)} device records")
 
 
+def create_navigation_routes_table():
+    """
+    Creates and initializes the `navigation_routes` table with
+    a vector similarity index for semantic route discovery.
+    """
+    client = get_db_client()
+
+    ensure_database(client, DATABASE_NAME)
+
+    client.command("""
+        CREATE TABLE IF NOT EXISTS navigation_routes (
+            id UUID,
+            routePath String,
+            pagePurpose String,
+
+            param_keys Array(String),
+            param_purposes Array(String),
+            param_types Array(String),
+            param_required Array(UInt8),
+
+            isDynamicRoute UInt8,
+
+            layouts Array(String),
+            routeGroups Array(String),
+            accessLevel String,
+
+            embedding Array(Float32)
+        )
+        ENGINE = MergeTree
+        ORDER BY id
+    """)
+
+    create_vector_index(client, table_name="navigation_routes")
+
+    print("✅ 'navigation_routes' table and vector similarity index are ready!")
+
+
+def insert_navigation_routes(all_routes: list[dict]):
+    routes = all_routes[0:20]
+    """
+    Insert multiple navigation route records into the `navigation_routes` table.
+
+    Each route dict should contain:
+    - routePath
+    - pagePurpose
+    - routeParameters (dict)
+    - isDynamicRoute ("True"/"False" or bool)
+    - layouts (list[str])
+    - routeGroups (list[str])
+    - accessLevel
+    """
+
+    if not routes:
+        return
+
+    print(f"Inserting {len(routes)} navigation routes into ClickHouse...")
+
+    client = get_db_client()
+    rows = []
+
+    for index, route in enumerate(routes, start=1):
+        print("Processing route:", index)
+
+        # Normalize route parameters
+        param_keys = []
+        param_purposes = []
+        param_types = []
+        param_required = []
+
+        route_params = route.get("routeParameters", {}) or {}
+
+        for key, meta in route_params.items():
+            param_keys.append(key)
+            param_purposes.append(meta.get("purpose", ""))
+            param_types.append(meta.get("type", "string"))
+
+            # Convert "True"/"False" or bool → UInt8
+            required = meta.get("required", False)
+            param_required.append(1 if str(required).lower() == "true" else 0)
+
+        embedding = get_navigation_routes_embedding(route)
+
+        # Build row
+        rows.append(
+            {
+                "id": str(uuid.uuid4()),
+                "routePath": route["routePath"],
+                "pagePurpose": route.get("pagePurpose", ""),
+                "param_keys": param_keys,
+                "param_purposes": param_purposes,
+                "param_types": param_types,
+                "param_required": param_required,
+                "isDynamicRoute": 1
+                if str(route.get("isDynamicRoute")).lower() == "true"
+                else 0,
+                "layouts": route.get("layouts", []),
+                "routeGroups": route.get("routeGroups", []),
+                "accessLevel": route.get("accessLevel", "public"),
+                "embedding": embedding,
+            }
+        )
+
+    # Column order must match ClickHouse table
+    columns = [
+        "id",
+        "routePath",
+        "pagePurpose",
+        "param_keys",
+        "param_purposes",
+        "param_types",
+        "param_required",
+        "isDynamicRoute",
+        "layouts",
+        "routeGroups",
+        "accessLevel",
+        "embedding",
+    ]
+
+    data_tuples = [tuple(row[col] for col in columns) for row in rows]
+
+    client.insert(
+        table="navigation_routes",
+        data=data_tuples,
+        column_names=columns,
+        database="temp",
+    )
+
+    print(f"✅ Inserted {len(rows)} navigation routes")
+
+
 if __name__ == "__main__":
-    seed_devices_table()
-    insert_devices(devices_list)
+    # # for devices
+    # create_devices_table()
+    # insert_devices(devices_list)
+
+    # for navigation routes
+    # create_navigation_routes_table()
+    insert_navigation_routes(routes_data)

@@ -35,7 +35,21 @@ def build_device_embedding_text(device: dict) -> str:
     )
 
 
+def build_navigation_routes_embedding_text(nav: dict) -> str:
+    """
+    Convert a device record into a human-readable text
+    that can be embedded for semantic search.
+    """
+    return f"{nav['pagePurpose']} {nav['routePath']}"
+
+
 def get_device_embedding(device: dict) -> list[float]:
     """Generate embedding for a device record."""
     text = build_device_embedding_text(device)
+    return generate_embedding(text)
+
+
+def get_navigation_routes_embedding(device: dict) -> list[float]:
+    """Generate embedding for a device record."""
+    text = build_navigation_routes_embedding_text(device)
     return generate_embedding(text)
