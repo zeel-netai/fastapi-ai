@@ -15,4 +15,5 @@ dependencies = [
     "langchain-groq>=1.1.1",
     "langchain-openai>=1.1.5",
     "mcp-use>=1.5.1",
+    "sentence-transformers>=5.2.0",
 ]

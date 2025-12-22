@@ -13,3 +13,7 @@ DB_CONFIG = {
     "username": "admin",
     "password": os.getenv("DB_PASSWORD"),
 }
+
+EMBEDDING_DIMENSION = 384
+
+IS_DEV_MODE = False

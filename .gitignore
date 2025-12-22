@@ -12,5 +12,6 @@ wheels/
 
 # Data files
 all_routes_data.py
+all_devices_list.py
 faiss_routes_index
 faiss_routes_metadata.pkl
