@@ -156,19 +156,19 @@ def create_navigation_routes_table():
     client.command("""
         CREATE TABLE IF NOT EXISTS navigation_routes (
             id UUID,
-            routePath String,
-            pagePurpose String,
+            route_path String,
+            page_purpose String,
 
             param_keys Array(String),
             param_purposes Array(String),
             param_types Array(String),
             param_required Array(UInt8),
 
-            isDynamicRoute UInt8,
+            is_dynamic_route UInt8,
 
             layouts Array(String),
-            routeGroups Array(String),
-            accessLevel String,
+            route_groups Array(String),
+            access_level String,
 
             embedding Array(Float32)
         )
@@ -187,10 +187,10 @@ def insert_navigation_routes(all_routes: list[dict]):
     Insert multiple navigation route records into the `navigation_routes` table.
 
     Each route dict should contain:
-    - routePath
-    - pagePurpose
+    - route_path
+    - page_purpose
     - routeParameters (dict)
-    - isDynamicRoute ("True"/"False" or bool)
+    - is_dynamic_route ("True"/"False" or bool)
     - layouts (list[str])
     - routeGroups (list[str])
     - accessLevel
@@ -230,18 +230,18 @@ def insert_navigation_routes(all_routes: list[dict]):
         rows.append(
             {
                 "id": str(uuid.uuid4()),
-                "routePath": route["routePath"],
-                "pagePurpose": route.get("pagePurpose", ""),
+                "route_path": route["routePath"],
+                "page_purpose": route.get("pagePurpose", ""),
                 "param_keys": param_keys,
                 "param_purposes": param_purposes,
                 "param_types": param_types,
                 "param_required": param_required,
-                "isDynamicRoute": 1
+                "is_dynamic_route": 1
                 if str(route.get("isDynamicRoute")).lower() == "true"
                 else 0,
                 "layouts": route.get("layouts", []),
-                "routeGroups": route.get("routeGroups", []),
-                "accessLevel": route.get("accessLevel", "public"),
+                "route_groups": route.get("routeGroups", []),
+                "access_level": route.get("accessLevel", "public"),
                 "embedding": embedding,
             }
         )
@@ -249,16 +249,16 @@ def insert_navigation_routes(all_routes: list[dict]):
     # Column order must match ClickHouse table
     columns = [
         "id",
-        "routePath",
-        "pagePurpose",
+        "route_path",
+        "page_purpose",
         "param_keys",
         "param_purposes",
         "param_types",
         "param_required",
-        "isDynamicRoute",
+        "is_dynamic_route",
         "layouts",
-        "routeGroups",
-        "accessLevel",
+        "route_groups",
+        "access_level",
         "embedding",
     ]
 
@@ -280,5 +280,5 @@ if __name__ == "__main__":
     # insert_devices(devices_list)
 
     # for navigation routes
-    # create_navigation_routes_table()
+    create_navigation_routes_table()
     insert_navigation_routes(routes_data)
