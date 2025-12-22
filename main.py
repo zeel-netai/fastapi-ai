@@ -4,6 +4,7 @@ from services.chat_ai import ask_query, ask_navigation_query
 from dotenv import load_dotenv
 from services.embedding import create_embeddings_model
 from db.clickhouse import get_db_client
+from services.search_item import search_device
 
 app = FastAPI()
 
@@ -46,6 +47,11 @@ async def read_root():
                 "description": "Ask a navigation related question to the AI and get a response.",
                 "payload": {"query": "The question you want to ask the AI."},
             },
+            "/search/device": {
+                "method": "POST",
+                "description": "Ask a device related question and get a response.",
+                "payload": {"query": "The question you want to ask."},
+            },
         },
     }
 
@@ -72,3 +78,10 @@ def ask_question(payload: AskQuery):
 def ask_navigation_query_fn(payload: AskQuery):
     response = ask_navigation_query(payload.query, vectors, metadata)
     return {"query": payload.query, "response": response}
+
+
+@app.post("/search/device")
+def search_device_fn(payload: AskQuery):
+    # Placeholder for device search logic
+    result = search_device(payload.query)
+    return {"query": payload.query, "response": result}
