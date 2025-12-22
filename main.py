@@ -3,6 +3,7 @@ from models.chat_ai import AskQuery
 from services.chat_ai import ask_query, ask_navigation_query
 from dotenv import load_dotenv
 from services.embedding import create_embeddings_model
+from db.clickhouse import get_db_client
 
 app = FastAPI()
 
@@ -47,6 +48,13 @@ async def read_root():
             },
         },
     }
+
+
+@app.get("/health")
+def health_check():
+    db = get_db_client()
+    result = db.query("SELECT 1")
+    return {"status": "ok", "db_respons ": result.result_rows}
 
 
 @app.get("/ping")

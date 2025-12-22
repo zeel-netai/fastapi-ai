@@ -5,6 +5,7 @@ description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
+    "clickhouse-connect>=0.10.0",
     "faiss-cpu>=1.13.1",
     "fastapi[standard]>=0.125.0",
     "google-genai>=1.56.0",
