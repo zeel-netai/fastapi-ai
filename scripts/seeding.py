@@ -181,8 +181,7 @@ def create_navigation_routes_table():
     print("✅ 'navigation_routes' table and vector similarity index are ready!")
 
 
-def insert_navigation_routes(all_routes: list[dict]):
-    routes = all_routes[0:20]
+def insert_navigation_routes(routes: list[dict]):
     """
     Insert multiple navigation route records into the `navigation_routes` table.
 

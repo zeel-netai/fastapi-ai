@@ -5,6 +5,7 @@ from dotenv import load_dotenv
 from services.embedding import create_embeddings_model
 from db.clickhouse import get_db_client
 from services.search_item import search_device, search_navigation_route, chat_query
+from agent import setup_agent
 
 app = FastAPI()
 
@@ -18,10 +19,10 @@ def startup_event():
     try:
         print("====== Performing startup tasks...=======")
         load_dotenv()
-        result = create_embeddings_model()
-        global vectors, metadata
-        vectors = result.get("vectors")
-        metadata = result.get("metadata")
+        # result = create_embeddings_model()
+        # global vectors, metadata
+        # vectors = result.get("vectors")
+        # metadata = result.get("metadata")
         print("====== Startup tasks completed. =======")
     except Exception as e:
         print("====== Error during startup: =======", str(e))
@@ -59,7 +60,12 @@ async def read_root():
             },
             "/chat": {
                 "method": "POST",
-                "description": "Ask a navigation route related question and get a response.",
+                "description": "Ask a navigation route related question and get a response it will use simple emebeddings search will not involved AI.",
+                "payload": {"query": "The question you want to ask."},
+            },
+            "/agent": {
+                "method": "POST",
+                "description": "Ask a navigation route related question to an agent and get a response.",
                 "payload": {"query": "The question you want to ask."},
             },
         },
@@ -108,4 +114,10 @@ def search_route_fn(payload: AskQuery):
 def chat_query_fn(payload: AskQuery):
     # Placeholder for device search logic
     result = chat_query(payload.query)
+    return {"query": payload.query, "response": result}
+
+
+@app.post("/agent")
+async def chat_agent_fn(payload: AskQuery):
+    result = await setup_agent(payload.query)
     return {"query": payload.query, "response": result}

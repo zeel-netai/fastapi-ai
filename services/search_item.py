@@ -29,11 +29,13 @@ def search_device(query: str, result_limit=5, q_vector=None):
 
         formatted = [dict(zip(columns, row)) for row in rows]
 
-        print("Search results:", formatted)
+        # Suppress print to avoid interfering with JSONRPC
+        # print("Search results:", formatted)
         return formatted
 
     except Exception as e:
-        print("Error in ask_navigation_query:", str(e))
+        # Suppress print to avoid interfering with JSONRPC
+        # print("Error in ask_navigation_query:", str(e))
         return f"An error occurred: {str(e)}"
 
 
@@ -69,11 +71,13 @@ def search_navigation_route(query: str, result_limit=5, q_vector=None):
 
         formatted = [dict(zip(columns, row)) for row in rows]
 
-        print("Search results:", formatted)
+        # Suppress print to avoid interfering with JSONRPC
+        # print("Search results:", formatted)
         return formatted
 
     except Exception as e:
-        print("Error in ask_navigation_query:", str(e))
+        # Suppress print to avoid interfering with JSONRPC
+        # print("Error in ask_navigation_query:", str(e))
         return f"An error occurred: {str(e)}"
 
 
@@ -101,5 +105,6 @@ def chat_query(query: str):
         }
 
     except Exception as e:
-        print("Error in chat_with_navigation_route:", str(e))
+        # Suppress print to avoid interfering with JSONRPC
+        # print("Error in chat_with_navigation_route:", str(e))
         return f"An error occurred: {str(e)}"
