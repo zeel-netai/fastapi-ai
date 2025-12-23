@@ -6,8 +6,17 @@ from services.embedding import create_embeddings_model
 from db.clickhouse import get_db_client
 from services.search_item import search_device, search_navigation_route, chat_query
 from agent import setup_agent
+from starlette.middleware.cors import CORSMiddleware
 
 app = FastAPI()
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=["*"],
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 vectors = None
 metadata = None
