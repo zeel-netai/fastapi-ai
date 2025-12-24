@@ -88,7 +88,11 @@ def chat_query(query: str):
         result_limit = 1
 
         route = search_navigation_route(query, result_limit, query_vector)
-        device = search_device(query, result_limit, query_vector)
+        device = (
+            search_device(query, result_limit, query_vector)
+            if route[0].get("is_dynamic_route", False)
+            else None
+        )
 
         params = {
             "navigation_route": None,
@@ -100,8 +104,8 @@ def chat_query(query: str):
         }
 
         return {
-            "navigation_route": route[0],
-            "device": device[0],
+            "navigation_route": route[0].get("route_path", ""),
+            "device": device[0] if device else None,
         }
 
     except Exception as e:
