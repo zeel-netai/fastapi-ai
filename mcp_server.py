@@ -3,13 +3,14 @@ from services.search_item import (
     search_device as search_device_fn,
     search_navigation_route,
 )
+from services.db_vectorizer import generate_embedding
 
 
 mcp = FastMCP("navigation_tools")
 
 
 @mcp.tool()
-def search_device(device_name: str) -> dict:
+def search_device(device_name: str, query_embedding=None) -> dict:
     """
     Search vector store for a device by name using semantic similarity.
 
@@ -18,6 +19,7 @@ def search_device(device_name: str) -> dict:
 
     Args:
         device_name (str): Device name, hostname, or description (e.g., "network device", "server xyz")
+        query_embedding (list): Optional pre-computed embedding to avoid recomputation
 
     Returns:
         dict: Contains device_id (unique identifier) and device_name (hostname).
@@ -27,12 +29,20 @@ def search_device(device_name: str) -> dict:
         Exception: If the search fails or no devices are found
     """
     try:
-        results = search_device_fn(device_name)
+        # Use provided embedding or generate it (cached)
+        q_embedding = (
+            query_embedding if query_embedding else generate_embedding(device_name)
+        )
+        
+        print('q_embedding search_device for intent:', query_embedding)
+
+
+        results = search_device_fn(device_name, q_embedding)
 
         if not results or len(results) == 0:
             return {
                 "status": "error",
-                "device_id": None,
+                "device_id": None,  
                 "device_name": None,
                 "message": f"No device found matching '{device_name}'",
                 "confidence": 0.0,
@@ -52,6 +62,7 @@ def search_device(device_name: str) -> dict:
         }
 
     except Exception as e:
+        print(f"Error in search_device tool: {str(e)}")
         return {
             "status": "error",
             "device_id": None,
@@ -62,7 +73,7 @@ def search_device(device_name: str) -> dict:
 
 
 @mcp.tool()
-def search_route(intent: str) -> dict:
+def search_route(intent: str, query_embedding=None) -> dict:
     """
     Search vector store for a navigation route by user intent.
 
@@ -76,6 +87,7 @@ def search_route(intent: str) -> dict:
 
     Args:
         intent (str): User's intent or action (e.g., "dashboard", "view alerts", "device overview")
+        query_embedding (list): Optional pre-computed embedding to avoid recomputation
 
     Returns:
         dict: Contains route_path (the URL path template), route_type classification,
@@ -100,7 +112,12 @@ def search_route(intent: str) -> dict:
         Exception: If the search fails or no routes are found
     """
     try:
-        results = search_navigation_route(intent)
+        # Use provided embedding or generate it (cached)
+        q_embedding = query_embedding if query_embedding else generate_embedding(intent)
+
+        print('q_embedding Searching route for intent:', query_embedding)
+
+        results = search_navigation_route(intent, q_embedding)
 
         if not results or len(results) == 0:
             return {
@@ -135,6 +152,7 @@ def search_route(intent: str) -> dict:
         }
 
     except Exception as e:
+        print(f"Error in search_route tool: {str(e)}")
         return {
             "status": "error",
             "route_path": None,

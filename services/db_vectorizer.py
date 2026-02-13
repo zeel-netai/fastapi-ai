@@ -1,19 +1,58 @@
 from sentence_transformers import SentenceTransformer
 from config import EMBEDDING_DIMENSION
+import hashlib
+
+# ============================================================================
+# SINGLETON EMBEDDING MODEL (loaded once, reused)
+# ============================================================================
+_embedding_model = None
+_embedding_cache = {}  # Cache to store computed embeddings
+
+
+def get_embedding_model():
+    """
+    Get or initialize the embedding model as a singleton.
+    This ensures the model is loaded only once for all embedding calls.
+    """
+    global _embedding_model
+    if _embedding_model is None:
+        print("[INIT] Loading embedding model 'all-MiniLM-L6-v2' (first time only)...")
+        _embedding_model = SentenceTransformer("all-MiniLM-L6-v2")
+        print("[INIT] Embedding model loaded successfully.")
+    return _embedding_model
+
+
+def _get_cache_key(text: str) -> str:
+    """Generate a hash-based cache key for embeddings."""
+    return hashlib.md5(text.encode()).hexdigest()
 
 
 def generate_embedding(text: str) -> list[float]:
     """
-    Generate a vector embedding from text.
+    Generate a vector embedding from text with caching.
     Returns a list[float].
+    
+    Optimizations:
+    - Uses singleton model instance (loaded once)
+    - Caches computed embeddings to avoid recomputation
     """
-    embedding_model = SentenceTransformer("all-MiniLM-L6-v2")
+    # Check cache first
+    cache_key = _get_cache_key(text)
+    if cache_key in _embedding_cache:
+        return _embedding_cache[cache_key]
+    
+    # Get or initialize the embedding model
+    embedding_model = get_embedding_model()
     embedding = embedding_model.encode(text).tolist()
 
     if len(embedding) != EMBEDDING_DIMENSION:
         raise ValueError(
             f"Embedding dimension mismatch: expected {EMBEDDING_DIMENSION}, got {len(embedding)}"
         )
+    
+    # Cache the result
+    _embedding_cache[cache_key] = embedding
+    
     return embedding
 
 
