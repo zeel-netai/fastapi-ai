@@ -1,9 +1,15 @@
+import sys
 from mcp_use.server import FastMCP
 from services.search_item import (
     search_device as search_device_fn,
     search_navigation_route,
 )
 from services.db_vectorizer import generate_embedding
+
+
+def log(msg: str):
+    """Log to stderr so it doesn't corrupt the JSON-RPC stdio transport."""
+    print(msg, file=sys.stderr, flush=True)
 
 
 mcp = FastMCP("navigation_tools")
@@ -34,12 +40,12 @@ def search_device(device_name: str, query_embedding=None) -> dict:
             query_embedding if query_embedding else generate_embedding(device_name)
         )
         
-        print('q_embedding search_device for intent:', query_embedding)
+        log(f'q_embedding search_device for intent: {query_embedding} ${device_name}')
 
 
-        results = search_device_fn(device_name, q_embedding)
+        results = search_device_fn(device_name, q_vector=q_embedding)
 
-        if not results or len(results) == 0:
+        if isinstance(results, str) or not results or len(results) == 0:
             return {
                 "status": "error",
                 "device_id": None,  
@@ -62,7 +68,7 @@ def search_device(device_name: str, query_embedding=None) -> dict:
         }
 
     except Exception as e:
-        print(f"Error in search_device tool: {str(e)}")
+        log(f"Error in search_device tool: {str(e)}")
         return {
             "status": "error",
             "device_id": None,
@@ -115,11 +121,11 @@ def search_route(intent: str, query_embedding=None) -> dict:
         # Use provided embedding or generate it (cached)
         q_embedding = query_embedding if query_embedding else generate_embedding(intent)
 
-        print('q_embedding Searching route for intent:', query_embedding)
+        log(f'q_embedding Searching route for intent: {query_embedding} ${intent} ${q_embedding}')
 
-        results = search_navigation_route(intent, q_embedding)
+        results = search_navigation_route(intent, q_vector=q_embedding)
 
-        if not results or len(results) == 0:
+        if isinstance(results, str) or not results or len(results) == 0:
             return {
                 "status": "error",
                 "route_path": None,
@@ -152,7 +158,7 @@ def search_route(intent: str, query_embedding=None) -> dict:
         }
 
     except Exception as e:
-        print(f"Error in search_route tool: {str(e)}")
+        log(f"Error in search_route tool: {str(e)}")
         return {
             "status": "error",
             "route_path": None,
